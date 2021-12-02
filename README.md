@@ -1,4 +1,6 @@
-# ecological_backpack_form_filler
-The purpose of this is to fill a form to calculate ecological impact and scrape the calculated impact.
+# green_identity_environmental_impact
+This is a repository for my bachelor's thesis comparing green identity and environmental impact
+It includes survey layout, survey results, and a python script to interact with an online environmental impact caluclator
+
 This is done for purely academic purposes, supporting my bachelor's thesis and follow-on research.
-Website for survey: https://www.ressourcen-rechner.de/calculator.php?lang=en
+Website for calculator: https://www.ressourcen-rechner.de/calculator.php?lang=en
