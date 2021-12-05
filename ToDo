@@ -3,11 +3,10 @@ choose survey questions
 arrange survey csv table to be usable with ecological backpack website
 create survey with socsurvey / qualtrics
 test survey 
-test backpack_form_filler
+test read_input_scrape.py
+  proof of concept:
+     read csv [DONE]
+     inputs cell values to online survey [DONE]
+     pulls results [DONE]
+     writes them to csv
 distribute survey
-
-Python:
-set up read_from_csv
-set up input_to_backpack
-set up scrape_backpack_results
-set up save_results_to_csv
