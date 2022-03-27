@@ -2,11 +2,7 @@
 title: 'thesis_survey_analysis'
 author: 'Adam Hardaker'
 date: '03/27/2022'
-output:
-  pdf_document: default
-  html_document:
-    df_print: paged
-  word_document: default
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
