@@ -135,6 +135,7 @@ sosci_survey_merged <- sosci_survey_derived %>%
          identity4 = ID02_04,
          SAES = SA01,
          country = HO02,
+         housing_size = HO03_04,
          age = SD02_01,
          gender = SD03,
          income = SD04,
@@ -252,19 +253,19 @@ sosci_survey_merged <- sosci_survey_merged %>%
 
 # remove unnecessary variables
 sosci_survey_merged <- sosci_survey_merged %>%
-  select(CASE, SAES, country, 104:128) # removes unnecessary variables
+  select(CASE, SAES, country, housing_size, 104:128) # removes unnecessary variables
 
 # makes NA values for income for those who didn't want to select an option
 sosci_survey_merged$income[sosci_survey_merged$income == -1 | sosci_survey_merged$income == -9 ] <- NA
 
 # orders income
-sosci_survey_merged$income <- factor(sosci_survey_merged$income, levels=c('< €1000', '€1000-€2000', '€2000-€3000', '€3000-€5000', '> €5000'), ordered = TRUE)
+sosci_survey_merged$income <- factor(sosci_survey_merged$income, levels=c('< €1000', '€1000-€2000', '€2000-€3000', '€3000-€5000', '> €5000'), ordered = FALSE)
 
 # orders health
-sosci_survey_merged$health <- factor(sosci_survey_merged$health, levels=c('very bad', 'bad', 'average', 'good', 'excellent'), ordered = TRUE)
+sosci_survey_merged$health <- factor(sosci_survey_merged$health, levels=c('very bad', 'bad', 'average', 'good', 'excellent'), ordered = FALSE)
 
 # orders education level
-sosci_survey_merged$education <- factor(sosci_survey_merged$education, levels=c('low', 'med', 'high'), ordered = TRUE)
+sosci_survey_merged$education <- factor(sosci_survey_merged$education, levels=c('low', 'med', 'high'), ordered = FALSE)
 
 # turns all remaining values of -9 to NA for calculation
 sosci_survey_merged[sosci_survey_merged == -9 ] <- NA
@@ -285,13 +286,63 @@ attach(sosci_survey_merged)
 
 Summary stats for quantitative variables
 ```{r, header = FALSE, results='asis'}
-stargazer(as.data.frame(sosci_survey_merged[c(2,27,19,13:18,4,26)]),
+stargazer(as.data.frame(sosci_survey_merged[c(
+  "SAES",
+  "identity_score",
+  "impact_total",
+  "impact_housing",
+  "impact_consumer",
+  "impact_nutrition",
+  "impact_leisure",
+  "impact_mobility",
+  "impact_vacation",
+  "housing_size",
+  "age",
+  "num_children")]),
           omit.summary.stat = c('p25', 'p75'),
           title = 'Descriptive statistics',
           digits = 2,
           type = 'html',
           out = 'output/summary_stats.html')
 
+```
+
+Stacked and reordered bar chart for total impact by sector
+```{r}
+sosci_survey_merged %>%
+  select(CASE, impact_housing, impact_nutrition, impact_mobility, impact_consumer, impact_vacation, impact_leisure) %>%
+  plot_ly(x = ~row.names(sosci_survey_merged), y= ~impact_vacation, type = 'bar', name= 'vacation', marker = list(color = '#f94144')) %>%
+  add_trace(y = ~impact_mobility, name = 'mobility', marker = list(color = '#f3722c')) %>%
+  add_trace(y = ~impact_leisure, name = 'leisure', marker = list(color = '#f9c74f')) %>%
+  add_trace(y = ~impact_nutrition, name = 'nutrition', marker = list(color = '#43aa8b')) %>%
+  add_trace(y = ~impact_consumer, name = 'consumer', marker = list(color = '#577590')) %>%
+  add_trace(y = ~impact_housing, name = 'housing', marker = list(color = '#277da1')) %>%
+  layout(yaxis = list(title = 'Environmental Impact (tons of material intensity)'),
+         xaxis = list(categoryorder = 'total ascending', title = '', showticklabels=FALSE),
+         legend = list(title=list(text='<b> Sector </b>')),
+         bargap = 0,
+         barmode = 'stack')
+```
+
+Boxplot comparing SAES and identity
+```{r}
+box_SAES <- sosci_survey_merged %>%
+  ggplot(aes(y = SAES)) +
+  geom_boxplot() +
+  labs(x = 'SAES', y = '') +
+  coord_cartesian(ylim = c(1, 10)) +
+  scale_y_continuous(breaks = seq(0, 10, 1)) +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+box_identity <- sosci_survey_merged %>%
+  ggplot(aes(y = identity_score)) +
+  geom_boxplot() +
+  labs(x = 'Identity', y = '') +
+  coord_cartesian(ylim = c(1, 5)) +
+  scale_y_continuous(breaks = seq(1, 5, .5)) +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+grid.arrange(box_SAES, box_identity, ncol=2)
 ```
 
 Summary stats for categorical variables
@@ -311,7 +362,6 @@ print(cat_vars)
 ```
 
 Pairwise Correlation Table (Pearson)
-
 ```{r, results='asis'}
 # MUST BE NUMERICAL VARIABLES
 cormat <- sosci_survey_merged %>%
@@ -324,39 +374,6 @@ cortab <- as.data.frame(cortab)
 stargazer(cortab, summary = FALSE, type = 'latex', out = 'output/cortab.html')
 ```
 
-Spearman Rank Correlations
-
-```{r}
-cormat2 <- sosci_survey_merged %>%
-  select(c(SAES, identity_score, impact_total, impact_housing, impact_consumer, impact_nutrition, impact_leisure, impact_mobility, impact_vacation))
-
-cortab2 <- round(cor(cormat2, use = 'complete.obs'), 3)
-cortab2[upper.tri(cortab2)] <- ''
-cortab2 <- as.data.frame(cortab2)
-
-stargazer(cortab2, summary = FALSE, type = 'latex', out = 'output/EF_SAES_cor.html')
-```
-
-Getting p-values for rank correlations
-
-```{r}
-cor.test(SAES, impact_total, method = 'spearman')
-cor.test(SAES, impact_housing, method = 'spearman')
-cor.test(SAES, impact_consumer, method = 'spearman')
-cor.test(SAES, impact_nutrition, method = 'spearman')
-cor.test(SAES, impact_leisure, method = 'spearman')
-cor.test(SAES, impact_mobility, method = 'spearman')
-cor.test(SAES, impact_vacation, method = 'spearman')
-
-cor.test(identity_score, impact_total, method = 'spearman', exact = FALSE)
-cor.test(identity_score, impact_housing, method = 'spearman', exact = FALSE)
-cor.test(identity_score, impact_consumer, method = 'spearman', exact = FALSE)
-cor.test(identity_score, impact_nutrition, method = 'spearman', exact = FALSE)
-cor.test(identity_score, impact_leisure, method = 'spearman', exact = FALSE)
-cor.test(identity_score, impact_mobility, method = 'spearman', exact = FALSE)
-cor.test(identity_score, impact_vacation, method = 'spearman', exact = FALSE)
-```
-
 
 # Data Analysis
 
@@ -365,7 +382,7 @@ cor.test(identity_score, impact_vacation, method = 'spearman', exact = FALSE)
 Stargazer regression table 
 ```{r, header= FALSE, results = 'asis'}
 spec1 <- lm(impact_total ~ SAES)
-spec2 <- lm((impact_total ~ SAES + age + d_female + as.factor(health) + as.factor(income) + d_homeowner + d_unemployed + d_retired + d_low_ed + d_high_ed + d_living_together + num_children))
+spec2 <- lm((impact_total ~ SAES + age + d_female + health + income + d_homeowner + d_unemployed + d_retired + d_low_ed + d_high_ed + d_living_together + num_children))
 
 #create robust SE's
 rob_se <- list(sqrt(diag(vcovHC(spec1, type = 'HC1'))),
@@ -416,7 +433,7 @@ stargazer(spec3, spec4,
 Plot regressions
 
 ```{r, message = FALSE}
-plot_SAES <- sosci_survey_merged %>%
+scatter_SAES <- sosci_survey_merged %>%
   ggplot(aes(x=SAES, y = impact_total)) +
   geom_point() +
   geom_jitter(alpha = 0.6, height = 0.1, width = 0.05) +
@@ -424,35 +441,51 @@ plot_SAES <- sosci_survey_merged %>%
   scale_y_continuous(breaks = seq(0, 150, 10)) +
   labs(x = 'Self-assessed sustainability', y = 'Environmental impact (tons)') +
   geom_abline(intercept = 32.751, slope = -2.230, size=1, color = 'red')
+# this is taken from the regression
 
-plot_impact <- sosci_survey_merged %>%
+scatter_impact <- sosci_survey_merged %>%
   ggplot(aes(x=identity_score, y = impact_total)) +
   geom_point() +
   geom_jitter(alpha = 0.6, height = 0.1, width = 0.05) +
   scale_x_continuous(limits = c(2,5), breaks = seq(0, 5, .5)) +
   scale_y_continuous(breaks = seq(0, 150, 10)) +
   labs(x = 'Identity', y = 'Environmental impact (tons)')
- # stat_smooth(method = lm, se = FALSE, fullrange = TRUE)
 
-grid.arrange(plot_SAES, plot_impact, ncol=2)
+
+grid.arrange(scatter_SAES, scatter_impact, ncol=2)
 ```
 
-Stacked and reordered bar chart for total impact by sector
+Spearman Rank Correlations
 
 ```{r}
-sosci_survey_merged %>%
-  select(CASE, impact_housing, impact_nutrition, impact_mobility, impact_consumer, impact_vacation, impact_leisure) %>%
-  plot_ly(x = ~row.names(sosci_survey_merged), y= ~impact_vacation, type = 'bar', name= 'vacation', marker = list(color = '#f94144')) %>%
-  add_trace(y = ~impact_mobility, name = 'mobility', marker = list(color = '#f3722c')) %>%
-  add_trace(y = ~impact_leisure, name = 'leisure', marker = list(color = '#f9c74f')) %>%
-  add_trace(y = ~impact_nutrition, name = 'nutrition', marker = list(color = '#43aa8b')) %>%
-  add_trace(y = ~impact_consumer, name = 'consumer', marker = list(color = '#577590')) %>%
-  add_trace(y = ~impact_housing, name = 'housing', marker = list(color = '#277da1')) %>%
-  layout(yaxis = list(title = 'Environmental Impact (tons of material intensity)'),
-         xaxis = list(categoryorder = 'total ascending', title = '', showticklabels=FALSE),
-         legend = list(title=list(text='<b> Sector </b>')),
-         bargap = 0,
-         barmode = 'stack')
+cormat2 <- sosci_survey_merged %>%
+  select(c(SAES, identity_score, impact_total, impact_housing, impact_consumer, impact_nutrition, impact_leisure, impact_mobility, impact_vacation))
+
+cortab2 <- round(cor(cormat2, use = 'complete.obs'), 3)
+cortab2[upper.tri(cortab2)] <- ''
+cortab2 <- as.data.frame(cortab2)
+
+stargazer(cortab2, summary = FALSE, type = 'latex', out = 'output/EF_SAES_cor.html')
+```
+
+Getting p-values for rank correlations
+
+```{r}
+cor.test(SAES, impact_total, method = 'spearman')
+cor.test(SAES, impact_housing, method = 'spearman')
+cor.test(SAES, impact_consumer, method = 'spearman')
+cor.test(SAES, impact_nutrition, method = 'spearman')
+cor.test(SAES, impact_leisure, method = 'spearman')
+cor.test(SAES, impact_mobility, method = 'spearman')
+cor.test(SAES, impact_vacation, method = 'spearman')
+
+cor.test(identity_score, impact_total, method = 'spearman', exact = FALSE)
+cor.test(identity_score, impact_housing, method = 'spearman', exact = FALSE)
+cor.test(identity_score, impact_consumer, method = 'spearman', exact = FALSE)
+cor.test(identity_score, impact_nutrition, method = 'spearman', exact = FALSE)
+cor.test(identity_score, impact_leisure, method = 'spearman', exact = FALSE)
+cor.test(identity_score, impact_mobility, method = 'spearman', exact = FALSE)
+cor.test(identity_score, impact_vacation, method = 'spearman', exact = FALSE)
 ```
 
 END/////////////////////////////////////////////////////////////////////////////
